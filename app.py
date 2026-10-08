@@ -2,95 +2,82 @@ import os
 import sqlite3
 import time
 from flask import Flask, jsonify, render_template
-from flask_cors import CORS  # Permite requisições do Live Server (porta 5500)
-import serial
+# import serial  # Serial removido temporariamente para focar no frontend puramente.
 
 app = Flask(__name__)
-CORS(app)  # Libera o acesso para o Go Live (porta 5500)
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "portao.db")
-
-PORTA_SERIAL = "COM3"
-BAUD_RATE = 9600
-
-try:
-  arduino = serial.Serial(PORTA_SERIAL, BAUD_RATE, timeout=1)
-  time.sleep(2)
-  print(f"Conectado ao Arduino na porta {PORTA_SERIAL}")
-except Exception as e:
-  arduino = None
-  print(f"Arduino não conectado: modo simulação ativo.")
-
+# --- CONFIGURAÇÃO DO BANCO DE DADOS (SQLite) ---
+# Define o nome do arquivo do banco de dados na mesma pasta do app.py
+DB_NAME = "portao.db"
 
 def init_db():
-  conn = sqlite3.connect(DB_PATH)
-  cursor = conn.cursor()
-  cursor.execute("""
+    # Cria a tabela de acionamentos se ela não existir
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS acionamentos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            acao TEXT NOT NULL,
+            acao VARCHAR(20) NOT NULL,
             data_hora DATETIME DEFAULT CURRENT_TIMESTAMP
         );
     """)
-  conn.commit()
-  conn.close()
+    conn.commit()
+    conn.close()
+    print("✅ Banco de dados SQLite inicializado com sucesso.")
 
-
+# Inicializa o banco ao rodar o app
 init_db()
 
-
+# Função para gravar uma ação no banco
 def registrar_acionamento(acao):
-  conn = sqlite3.connect(DB_PATH)
-  cursor = conn.cursor()
-  cursor.execute("INSERT INTO acionamentos (acao) VALUES (?)", (acao,))
-  conn.commit()
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO acionamentos (acao) VALUES (?)", (acao,))
+    conn.commit()
+    
+    # Recupera o total atualizado
+    cursor.execute("SELECT COUNT(*) FROM acionamentos")
+    total = cursor.fetchone()[0]
+    conn.close()
+    print(f"📡 Comando recebido e gravado: {acao.upper()}. Total no BD: {total}")
+    return total
 
-  cursor.execute("SELECT COUNT(*) FROM acionamentos")
-  total = cursor.fetchone()[0]
-  conn.close()
-  return total
-
-
-def get_total_acionamentos():
-  conn = sqlite3.connect(DB_PATH)
-  cursor = conn.cursor()
-  cursor.execute("SELECT COUNT(*) FROM acionamentos")
-  resultado = cursor.fetchone()
-  conn.close()
-  return resultado[0] if resultado else 0
-
+# --- ROTAS DA APLICAÇÃO WEB ---
 
 @app.route("/")
 def index():
-  return render_template("index.html")
-
+    # Serve o frontend (templates/index.html)
+    return render_template("index.html")
 
 @app.route("/api/status", methods=["GET"])
 def status():
-  total = get_total_acionamentos()
-  return jsonify({"total_acionamentos": total})
-
+    # Retorna o total de acionamentos para o frontend atualizar o contador
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM acionamentos")
+    total = cursor.fetchone()[0]
+    conn.close()
+    return jsonify({"total_acionamentos": total})
 
 @app.route("/api/portao/<acao>", methods=["POST"])
 def controlar_portao(acao):
-  if acao not in ["abrir", "fechar"]:
-    return jsonify({"status": "erro", "mensagem": "Ação inválida"}), 400
+    # Processa os comandos recebidos do controle remoto no frontend
+    if acao not in ["abrir", "fechar"]:
+        return jsonify({"status": "erro", "mensagem": "Ação inválida"}), 400
 
-  if arduino and arduino.is_open:
+    # Grava a ação no banco de dados SQLite
     try:
-      comando = "A" if acao == "abrir" else "F"
-      arduino.write(comando.encode())
+        total_atualizado = registrar_acionamento(acao)
     except Exception as e:
-      print(f"Erro no Arduino: {e}")
+        return jsonify({"status": "erro", "mensagem": f"Erro no banco de dados: {e}"})
 
-  total = registrar_acionamento(acao)
-  return jsonify({
-      "status": "sucesso",
-      "acao": acao,
-      "total_acionamentos": total,
-  })
-
+    # Retorna sucesso IMEDIATAMENTE para o frontend começar a animação
+    return jsonify({
+        "status": "sucesso",
+        "acao": acao,
+        "total_acionamentos": total_atualizado,
+        "mensagem": f"O portão começou a {acao} (simulação)."
+    })
 
 if __name__ == "__main__":
-  app.run(debug=True, port=5000)
+    app.run(debug=True, port=5000)

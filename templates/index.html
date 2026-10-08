@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema do Portão Eletrônico</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="painel-principal">
+        
+        <!-- CARD 1: PORTÃO DE GARAGEM -->
+        <div class="card card-portao">
+            <h2>🏠 Portão de Garagem</h2>
+            
+            <div class="garagem">
+                <div id="portao" class="portao fechado">
+                    <div class="grade"></div>
+                    <div class="grade"></div>
+                    <div class="grade"></div>
+                    <div class="grade"></div>
+                    <div class="grade"></div>
+                    <div class="grade"></div>
+                </div>
+                <div class="luz-status" id="luzStatus"></div>
+            </div>
+
+            <div class="status-box">
+                <p>Estado: <strong id="estado">FECHADO</strong></p>
+                <p>Acionamentos no BD: <strong id="contador">0</strong></p>
+            </div>
+        </div>
+
+        <!-- CARD 2: CONTROLE REMOTO -->
+        <div class="card card-controle">
+            <div class="top-controle">
+                <h2>📻 Controle</h2>
+                <div class="led-controle" id="ledControle"></div>
+            </div>
+            
+            <p class="instrucoes">Clique para acionar:</p>
+
+            <div class="botoes">
+                <button id="btnAbrir" class="btn btn-abrir" onclick="enviarComando('abrir')">▲ ABRIR</button>
+                <button id="btnFechar" class="btn btn-fechar" onclick="enviarComando('fechar')" disabled>▼ FECHAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEÇÃO DE DOCUMENTAÇÃO -->
+    <div class="secao-documentacao">
+        
+        <div class="card card-resumo">
+            <h2>⚙️ Estados de Funcionamento do Portão</h2>
+            <div style="margin-bottom: 15px;">
+                <p><strong>1. Estado ABRINDO (Comando: ▲ ABRIR):</strong></p>
+                <ul>
+                    <li><strong>Portão:</strong> Recolhe gradualmente do chão até o topo (animação CSS de 3 segundos).</li>
+                    <li><strong>Sinalizador:</strong> LED Verde pisca no topo da garagem a cada 250ms.</li>
+                    <li><strong>Sonoro:</strong> Bipes contínuos soam via áudio do navegador (Web Audio API).</li>
+                    <li><strong>Resultado:</strong> Ao chegar no topo, o som para, o LED permanece Verde Aceso (Fixo) e o portão fica parado no topo aguardando nova ordem.</li>
+                </ul>
+            </div>
+            <div>
+                <p><strong>2. Estado FECHANDO (Comando: ▼ FECHAR):</strong></p>
+                <ul>
+                    <li><strong>Portão:</strong> Desce gradualmente do topo até fechar completamente a entrada.</li>
+                    <li><strong>Sinalizador:</strong> LED Vermelho pisca no topo da garagem.</li>
+                    <li><strong>Sonoro:</strong> Bipes de alerta de fechamento.</li>
+                    <li><strong>Resultado:</strong> Ao fechar, o som para, o LED permanece Vermelho Aceso (Fixo) e o portão fica parado e fechado.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card card-resumo">
+            <h2>📑 Resumo do Projeto</h2>
+            <p>
+                O Projeto Portão Automático é um sistema de automação residencial desenvolvido para controlar a abertura e o fechamento de um portão de garagem. A solução conecta uma interface gráfica web (HTML, CSS, JS e Python/Flask) a um circuito microcontrolado Arduino Uno R3, garantindo persistência dos dados de acionamento em banco de dados SQLite.
+            </p>
+        </div>
+
+        <div class="card card-requisitos">
+            <h2>📋 Requisitos do Sistema</h2>
+            <p><strong>Requisitos Funcionais:</strong> Definem as funcionalidades ativas do sistema, como a capacidade de receber comandos de abertura e fechamento via controle remoto IR ou interface web, acionar o servomotor SG90 nos ângulos programados, registrar histórico de eventos no banco de dados SQLite e sinalizar o status em tempo real por LEDs e Buzzer.</p>
+            <p><strong>Requisitos Não Funcionais:</strong> Determinam a qualidade e desempenho da aplicação, como o tempo de resposta da animação na interface (máximo de 3 segundos), usabilidade e responsividade do layout CSS, confiabilidade na transmissão de dados via porta Serial a 9600 bps e geração de áudio no navegador via Web Audio API.</p>
+
+            <button class="btn-saiba-mais" onclick="toggleDetalhes()">Saiba Mais</button>
+
+            <div id="detalhesRequisitos" class="detalhes-ocultos" style="display: none; margin-top: 15px;">
+                <p><strong>RF01 - Controle do Servo:</strong> Movimentação angular precisa de 0° a 120°.</p>
+                <p><strong>RF02 - Receptor IR:</strong> Leitura de frequência infravermelha para controle remoto físico.</p>
+                <p><strong>RF03 - Auditoria de BD:</strong> Incremento automático do contador a cada acionamento gravado no SQLite.</p>
+                <p><strong>RNF01 - Usabilidade:</strong> Layout gráfico proporcional expandido para visualização clara da garagem.</p>
+            </div>
+        </div>
+
+        <div class="card card-arduino">
+            <h2>🤖 ARDUINO E SUAS FUNÇÕES</h2>
+            <p><strong>Servo Motor SG90:</strong> Atua como o mecanismo mecânico de elevação do portão.</p>
+            <p><strong>LEDs e Buzzer Sonoro:</strong> Sinalizadores de alerta visual e sonoro durante a movimentação.</p>
+            <p><strong>Sensor Infravermelho (IR):</strong> Recepção dos sinais sem fio enviados pelo controle remoto portátil.</p>
+
+            <button class="btn-codigo" onclick="toggleCodigoArduino()">Clique para abrir o código</button>
+
+            <div id="painelCodigoArduino" class="painel-codigo" style="display: none; margin-top: 15px;">
+                <pre><code>#include &lt;Servo.h&gt;
+#include &lt;IRremote.h&gt;
+// Código do Arduino compilado com sucesso...</code></pre>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- LÓGICA COMPLETA DE INTERAÇÃO NO FRONTEND -->
+    <script>
+        let audioContext;
+        let intervaloBipe;
+        let intervaloLED;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("✅ Frontend carregado e pronto para acionamento!");
+            atualizarStatusBD();
+        });
+
+        function atualizarStatusBD() {
+            fetch('/api/status')
+                .then(res => res.json())
+                .then(data => {
+                    const contador = document.getElementById('contador');
+                    if (contador && data.total_acionamentos !== undefined) {
+                        contador.textContent = data.total_acionamentos;
+                    }
+                })
+                .catch(err => console.error('Aviso API:', err));
+        }
+
+        function tocarBipe(frequencia = 1000, duracaoMs = 150) {
+            try {
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = frequencia;
+                gain.gain.setValueAtTime(0.1, audioContext.currentTime);
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                osc.start();
+                setTimeout(() => osc.stop(), duracaoMs);
+            } catch(e) {}
+        }
+
+        function iniciarSinalSonoro(tempoTotalMs = 3000) {
+            clearInterval(intervaloBipe);
+            tocarBipe(1000, 150);
+            intervaloBipe = setInterval(() => { tocarBipe(1000, 150); }, 400);
+            setTimeout(() => { clearInterval(intervaloBipe); }, tempoTotalMs);
+        }
+
+        function piscarLED(corHex, tempoTotalMs = 3000) {
+            const luzStatus = document.getElementById('luzStatus');
+            if (!luzStatus) return;
+            clearInterval(intervaloLED);
+            luzStatus.style.backgroundColor = corHex;
+            luzStatus.style.boxShadow = `0 0 12px ${corHex}`;
+            let visivel = true;
+            intervaloLED = setInterval(() => {
+                visivel = !visivel;
+                luzStatus.style.opacity = visivel ? '1' : '0.2';
+            }, 250);
+            setTimeout(() => {
+                clearInterval(intervaloLED);
+                luzStatus.style.opacity = '1';
+                luzStatus.style.backgroundColor = corHex;
+            }, tempoTotalMs);
+        }
+
+        function enviarComando(acao) {
+            console.log("🚀 Disparando comando:", acao);
+
+            const portao = document.getElementById('portao');
+            const estadoTexto = document.getElementById('estado');
+            const btnAbrir = document.getElementById('btnAbrir');
+            const btnFechar = document.getElementById('btnFechar');
+            const contadorBD = document.getElementById('contador');
+            const ledControle = document.getElementById('ledControle');
+
+            btnAbrir.disabled = true;
+            btnFechar.disabled = true;
+
+            if (ledControle) {
+                ledControle.style.backgroundColor = '#2ecc71';
+                setTimeout(() => { ledControle.style.backgroundColor = '#7f8c8d'; }, 300);
+            }
+
+            // Envia para o servidor Flask
+            fetch(`/api/portao/${acao}`, { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'sucesso' && contadorBD) {
+                        contadorBD.textContent = data.total_acionamentos;
+                    }
+                })
+                .catch(err => console.error('Erro de comunicação:', err));
+
+            if (acao === 'abrir') {
+                iniciarSinalSonoro(3000);
+                piscarLED('#2ecc71', 3000);
+
+                portao.classList.remove('fechado');
+                portao.classList.add('aberto');
+                estadoTexto.textContent = 'ABRINDO...';
+                estadoTexto.style.color = '#2ecc71';
+
+                setTimeout(() => {
+                    estadoTexto.textContent = 'ABERTO';
+                    btnFechar.disabled = false;
+                }, 3000);
+
+            } else if (acao === 'fechar') {
+                iniciarSinalSonoro(3000);
+                piscarLED('#e74c3c', 3000);
+
+                portao.classList.remove('aberto');
+                portao.classList.add('fechado');
+                estadoTexto.textContent = 'FECHANDO...';
+                estadoTexto.style.color = '#e74c3c';
+
+                setTimeout(() => {
+                    estadoTexto.textContent = 'FECHADO';
+                    btnAbrir.disabled = false;
+                }, 3000);
+            }
+        }
+
+        function toggleDetalhes() {
+            const painel = document.getElementById('detalhesRequisitos');
+            painel.style.display = (painel.style.display === 'none' || painel.style.display === '') ? 'block' : 'none';
+        }
+
+        function toggleCodigoArduino() {
+            const painel = document.getElementById('painelCodigoArduino');
+            const btn = document.querySelector('.btn-codigo');
+            if (painel.style.display === 'none' || painel.style.display === '') {
+                painel.style.display = 'block';
+                btn.textContent = 'Clique para fechar o código';
+            } else {
+                painel.style.display = 'none';
+                btn.textContent = 'Clique para abrir o código';
+            }
+        }
+    </script>
+</body>
+</html>
