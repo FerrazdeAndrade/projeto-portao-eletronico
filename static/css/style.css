@@ -1,3 +1,12 @@
+/* Configurações Globais da Página */
+body {
+    background-color: #F5F2EB; /* Cor Palha/Straw suave */
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #333333;
+}
+
 /* Layout Principal em Grid */
 .painel-principal {
     display: grid;
@@ -7,19 +16,18 @@
     margin: 30px auto;
     padding: 0 20px;
     align-items: start;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .card {
     border-radius: 12px;
     padding: 24px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
 }
 
 .card-portao {
     background-color: #ffffff;
     color: #333333;
-    border: 1px solid #e0e0e0;
+    border: 1px solid #e2ded5;
 }
 
 /* Moldura Externa da Garagem */
@@ -151,13 +159,13 @@
     flex-direction: column;
     gap: 20px;
     padding: 0 20px;
-    font-family: Arial, sans-serif;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .card-resumo, .card-requisitos, .card-arduino {
     background-color: #ffffff;
     color: #333333;
-    border: 1px solid #e0e0e0;
+    border: 1px solid #e2ded5;
     border-radius: 12px;
     padding: 24px;
 }
@@ -173,7 +181,7 @@
 }
 
 .detalhes-ocultos {
-    background-color: #f8f9fa;
+    background-color: #fcfbf8;
     padding: 15px;
     border-left: 4px solid #3498db;
     border-radius: 4px;

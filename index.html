@@ -105,7 +105,116 @@
             <div id="painelCodigoArduino" class="painel-codigo" style="display: none; margin-top: 15px;">
                 <pre><code>#include &lt;Servo.h&gt;
 #include &lt;IRremote.h&gt;
-// Código do Arduino compilado com sucesso...</code></pre>
+
+const int RECV_PIN     = 2;
+const int LED_VERMELHO = 4;
+const int LED_VERDE    = 5;
+const int SERVO_PIN    = 9;
+const int PIEZO_BUZZER = 10;
+
+const uint16_t COMANDO_BOTAO = 0x44;
+int estadoPortao = 0;
+
+Servo meuServo;
+
+void emitirBip(int duracao) {
+  for (int i = 0; i &lt; (duracao * 2); i++) {
+    digitalWrite(PIEZO_BUZZER, HIGH);
+    delayMicroseconds(300);
+    digitalWrite(PIEZO_BUZZER, LOW);
+    delayMicroseconds(300);
+  }
+}
+
+void setup() {
+  Serial.begin(9600);
+  delay(500);
+
+  pinMode(LED_VERMELHO, OUTPUT);
+  pinMode(LED_VERDE, OUTPUT);
+  pinMode(PIEZO_BUZZER, OUTPUT);
+
+  meuServo.attach(SERVO_PIN);
+  meuServo.write(0);
+
+  estadoPortao = 0;
+  digitalWrite(LED_VERMELHO, HIGH);
+  digitalWrite(LED_VERDE, LOW);
+  digitalWrite(PIEZO_BUZZER, LOW);
+  delay(500);
+
+  IrReceiver.begin(RECV_PIN, ENABLE_LED_FEEDBACK);
+  Serial.println("Sistema de portao automatico iniciado!");
+}
+
+void loop() {
+  if (IrReceiver.decode()) {
+    uint16_t comando = IrReceiver.decodedIRData.command;
+
+    if (comando == COMANDO_BOTAO) {
+      if (estadoPortao == 0) {
+        emitirBip(200);
+        for (int angulo = 0; angulo &lt;= 120; angulo += 10) {
+          meuServo.write(angulo);
+          digitalWrite(LED_VERDE, HIGH);
+          digitalWrite(LED_VERMELHO, LOW);
+          delay(80);
+        }
+        emitirBip(400);
+        estadoPortao = 1;
+        Serial.println("Estado do Portao: ABERTO");
+      } 
+      else if (estadoPortao == 1) {
+        for (int angulo = 120; angulo &gt;= 0; angulo -= 10) {
+          meuServo.write(angulo);
+          digitalWrite(LED_VERMELHO, HIGH);
+          digitalWrite(LED_VERDE, LOW);
+          delay(80);
+        }
+        emitirBip(150);
+        delay(150);
+        emitirBip(150);
+        estadoPortao = 0;
+        Serial.println("Estado do Portao: FECHADO");
+      }
+    } 
+    else if (comando != 0 &amp;&amp; comando != 0xFFFF) {
+      Serial.print("Outro botao ignorado: 0x");
+      Serial.println(comando, HEX);
+    }
+    IrReceiver.resume();
+  }
+
+  if (Serial.available() &gt; 0) {
+    char comandoSerial = Serial.read();
+    
+    if (comandoSerial == 'A' &amp;&amp; estadoPortao == 0) {
+      emitirBip(200);
+      for (int angulo = 0; angulo &lt;= 120; angulo += 10) {
+        meuServo.write(angulo);
+        digitalWrite(LED_VERDE, HIGH);
+        digitalWrite(LED_VERMELHO, LOW);
+        delay(80);
+      }
+      emitirBip(400);
+      estadoPortao = 1;
+      Serial.println("Estado do Portao: ABERTO");
+    } 
+    else if (comandoSerial == 'F' &amp;&amp; estadoPortao == 1) {
+      for (int angulo = 120; angulo &gt;= 0; angulo -= 10) {
+        meuServo.write(angulo);
+        digitalWrite(LED_VERMELHO, HIGH);
+        digitalWrite(LED_VERDE, LOW);
+        delay(80);
+      }
+      emitirBip(150);
+      delay(150);
+      emitirBip(150);
+      estadoPortao = 0;
+      Serial.println("Estado do Portao: FECHADO");
+    }
+  }
+}</code></pre>
             </div>
         </div>
 
@@ -124,14 +233,22 @@
 
         function atualizarStatusBD() {
             fetch('/api/status')
-                .then(res => res.json())
+                .then(res => {
+                    if (!res.ok) throw new Error('Modo Estático (sem Flask)');
+                    return res.json();
+                })
                 .then(data => {
                     const contador = document.getElementById('contador');
                     if (contador && data.total_acionamentos !== undefined) {
                         contador.textContent = data.total_acionamentos;
                     }
                 })
-                .catch(err => console.error('Aviso API:', err));
+                .catch(() => {
+                    // Fallback para GitHub Pages (usa localStorage)
+                    const totalLocal = parseInt(localStorage.getItem('total_acionamentos') || '0', 10);
+                    const contador = document.getElementById('contador');
+                    if (contador) contador.textContent = totalLocal;
+                });
         }
 
         function tocarBipe(frequencia = 1000, duracaoMs = 150) {
@@ -197,15 +314,22 @@
                 setTimeout(() => { ledControle.style.backgroundColor = '#7f8c8d'; }, 300);
             }
 
-            // Envia para o servidor Flask
+            // Tenta enviar para a API Flask; se falhar (no GitHub Pages), simula via localStorage
             fetch(`/api/portao/${acao}`, { method: 'POST' })
-                .then(res => res.json())
+                .then(res => {
+                    if (!res.ok) throw new Error('Modo Estático');
+                    return res.json();
+                })
                 .then(data => {
                     if (data.status === 'sucesso' && contadorBD) {
                         contadorBD.textContent = data.total_acionamentos;
                     }
                 })
-                .catch(err => console.error('Erro de comunicação:', err));
+                .catch(() => {
+                    let totalLocal = parseInt(localStorage.getItem('total_acionamentos') || '0', 10) + 1;
+                    localStorage.setItem('total_acionamentos', totalLocal);
+                    if (contadorBD) contadorBD.textContent = totalLocal;
+                });
 
             if (acao === 'abrir') {
                 iniciarSinalSonoro(3000);
@@ -254,7 +378,6 @@
             }
         }
     </script>
-    <!-- Ficheiro JavaScript principal carregado no final do body -->
     <script src="static/js/main.js"></script>
 </body>
 </html>
