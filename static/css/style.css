@@ -1,3 +1,165 @@
+/* ==============================
+   DIAGRAMA / GAUGE - FREQUÊNCIA DE ACIONAMENTOS
+   ============================== */
+
+.card-gauge, .card-diagrama, .card-historico {
+    margin-top: 24px;
+    padding: 24px;
+    text-align: left;
+    background-color: #ffffff;
+    border: 1px solid #d5d0c4;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+}
+
+.card-gauge h3, .card-diagrama h3, .card-historico .historico-header h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #2c3e50;
+    font-size: 1.1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.card-diagrama {
+    text-align: center;
+}
+
+.card-diagrama h3 {
+    justify-content: center;
+}
+
+/* Estilização extra para o container do Gráfico de Barras (Chart.js) */
+.card-diagrama canvas {
+    max-height: 230px;
+    margin: 0 auto;
+}
+
+/* Histórico Expansível Moderno */
+.historico-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+}
+
+.seta-toggle {
+    font-size: 1.1rem;
+    transition: transform 0.3s ease;
+    color: #3498db;
+    background: #eaf6ff;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.seta-toggle.aberto {
+    transform: rotate(180deg);
+    background: #d4ede6;
+    color: #27ae60;
+}
+
+.historico-lista {
+    max-height: 220px;
+    overflow-y: auto;
+    margin-top: 15px;
+    padding-right: 5px;
+    border-top: 1px solid #eae6df;
+    padding-top: 12px;
+}
+
+.item-historico {
+    font-size: 0.85rem;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    background-color: #fcfbf8;
+    border: 1px solid #f0ece4;
+    border-left: 4px solid #3498db;
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.item-historico.abrir {
+    border-left-color: #2ecc71;
+    background-color: #f4faf6;
+}
+
+.item-historico.fechar {
+    border-left-color: #e74c3c;
+    background-color: #fdf5f4;
+}
+
+/* Layout Grid Inferior (Lado a Lado) */
+.painel-inferior-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    max-width: 1200px;
+    margin: 0 auto 30px auto;
+    padding: 0 20px;
+    align-items: start;
+}
+
+/* Caso utilize o gauge circular de porcentagem */
+.gauge {
+    --progresso: 0%;
+    width: 180px;
+    height: 180px;
+    margin: 20px auto;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: conic-gradient(
+        #2ecc71 var(--progresso),
+        #e2ded5 var(--progresso)
+    );
+    transition: background 0.3s ease;
+    position: relative;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
+}
+
+.gauge-centro {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+#valorGauge {
+    font-size: 32px;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+#textoGauge {
+    margin-top: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #7f8c8d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.gauge-legenda {
+    color: #7f8c8d;
+    font-size: 13px;
+    margin-top: 15px;
+}
+
 /* Configurações Globais da Página */
 body {
     background-color: #F5F2EB; /* Cor Palha/Straw suave */
@@ -216,4 +378,30 @@ body {
 
 .painel-codigo pre {
     margin: 0;
+}
+
+/* Adaptação para celular */
+@media (max-width: 850px) {
+    .painel-principal, .painel-inferior-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .card-gauge, .card-diagrama, .card-historico {
+        padding: 16px;
+    }
+
+    .gauge {
+        width: 150px;
+        height: 150px;
+    }
+
+    .gauge-centro {
+        width: 115px;
+        height: 115px;
+    }
+
+    #valorGauge {
+        font-size: 26px;
+    }
 }

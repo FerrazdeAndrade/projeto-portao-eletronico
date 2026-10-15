@@ -5,6 +5,94 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema do Portão Eletrônico</title>
     <link rel="stylesheet" href="static/css/style.css">
+    <!-- BIBLIOTECA CHART.JS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Estilos para alinhar o Diagrama e o Histórico lado a lado */
+        .painel-inferior-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+            align-items: start;
+        }
+        .card-historico {
+            padding: 24px;
+            background-color: #ffffff;
+            border: 1px solid #e2ded5;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            height: 100%;
+            box-sizing: border-box;
+        }
+        .historico-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+        .historico-header h3 {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 1.15rem;
+        }
+        .seta-toggle {
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+            color: #3498db;
+        }
+        .seta-toggle.aberto {
+            transform: rotate(180deg);
+        }
+        .historico-lista {
+            max-height: 220px;
+            overflow-y: auto;
+            margin-top: 15px;
+            padding-right: 5px;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+        .item-historico {
+            font-size: 0.85rem;
+            padding: 6px 10px;
+            margin-bottom: 6px;
+            background-color: #fcfbf8;
+            border-left: 4px solid #3498db;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .item-historico.abrir {
+            border-left-color: #2ecc71;
+        }
+        .item-historico.fechar {
+            border-left-color: #e74c3c;
+        }
+        /* Botão de Lixeira */
+        .btn-deletar-item {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.95rem;
+            margin-left: 10px;
+            opacity: 0.6;
+            transition: opacity 0.2s, transform 0.2s;
+            padding: 2px 4px;
+        }
+        .btn-deletar-item:hover {
+            opacity: 1;
+            transform: scale(1.15);
+        }
+        @media (max-width: 850px) {
+            .painel-inferior-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="painel-principal">
@@ -27,8 +115,13 @@
 
             <div class="status-box">
                 <p>Estado: <strong id="estado">FECHADO</strong></p>
-                <p>Acionamentos no BD: <strong id="contador">0</strong></p>
+                <p>Acionamentos no BD: <strong id="contador">47</strong></p>
             </div>
+
+            <!-- BOTÃO PARA RESETAR DADOS -->
+            <button class="btn-reset" onclick="resetarDados()" style="margin-top: 15px; width: 100%; background-color: #e67e22; color: white; padding: 10px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
+                🔄 Resetar Dados / Zerar Contador
+            </button>
         </div>
 
         <!-- CARD 2: CONTROLE REMOTO -->
@@ -47,9 +140,61 @@
         </div>
     </div>
 
+    <!-- SEÇÃO LADO A LADO: DIAGRAMA E HISTÓRICO -->
+    <div class="painel-inferior-grid">
+        
+        <!-- CARD: DIAGRAMA DE FREQUÊNCIA DE ACIONAMENTOS -->
+        <div class="card card-diagrama" style="margin-top: 0; height: 100%; box-sizing: border-box;">
+            <h3>📊 Frequência de Acionamentos</h3>
+            <div style="width: 100%; max-width: 320px; margin: 0 auto;">
+                <canvas id="graficoFrequencia"></canvas>
+            </div>
+            <p style="margin-top: 15px; font-size: 13px; color: #666;">
+                🕒 Último Acionamento: <strong id="ultimoRegistro">Nenhum acionamento recente</strong>
+            </p>
+        </div>
+
+        <!-- CARD: HISTÓRICO EXPANSÍVEL DE ACIONAMENTOS -->
+        <div class="card-historico">
+            <div class="historico-header" onclick="toggleHistorico()">
+                <h3>🕒 Histórico de Acionamentos</h3>
+                <span id="setaHistorico" class="seta-toggle">▼</span>
+            </div>
+            <div id="painelHistorico" class="historico-lista" style="display: none;">
+                <p id="nenhumHistorico" style="color: #888; font-size: 0.9rem; text-align: center; margin: 10px 0;">Nenhum acionamento registrado ainda.</p>
+                <div id="listaAcionamentos"></div>
+            </div>
+        </div>
+
+    </div>
+
     <!-- SEÇÃO DE DOCUMENTAÇÃO -->
     <div class="secao-documentacao">
         
+        <!-- CARD: EXPLICAÇÃO DO GAUGE -->
+        <div class="card card-resumo">
+            <h2>📈 O que é um Gauge e suas Funcionalidades</h2>
+            <div style="margin-bottom: 15px;">
+                <p><strong>O que é:</strong> O <em>Gauge</em> (ou medidor gráfico) é um componente visual utilizado em dashboards para exibir métricas consolidadas de forma rápida, intuitiva e proporcional, facilitando a interpretação imediata do estado de operação.</p>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <p><strong>Funcionalidades do Gauge:</strong></p>
+                <ul>
+                    <li><strong>Monitoramento Proporcional:</strong> Converte o volume de acionamentos (aberturas e fechamentos) em uma distribuição visual clara.</li>
+                    <li><strong>Feedback Dinâmico:</strong> Permite alteração automática de cores conforme limiares de uso pré-estabelecidos.</li>
+                    <li><strong>Persistência de Dados:</strong> Atualiza-se instantaneamente a cada evento registrado no sistema ou banco de dados.</li>
+                </ul>
+            </div>
+            <div>
+                <p><strong>Funções para Informação:</strong></p>
+                <ul>
+                    <li>Sintetizar grandes volumes de dados operacionais em um único indicador central.</li>
+                    <li>Agilizar a tomada de decisão e análise rápida do fluxo de tráfego/operações do portão.</li>
+                    <li>Oferecer suporte visual executivo integrado aos relatórios de auditoria e requisitos do sistema.</li>
+                </ul>
+            </div>
+        </div>
+
         <div class="card card-resumo">
             <h2>⚙️ Estados de Funcionamento do Portão</h2>
             <div style="margin-bottom: 15px;">
@@ -225,11 +370,73 @@ void loop() {
         let audioContext;
         let intervaloBipe;
         let intervaloLED;
+        let meuGraficoFrequencia;
+        let contadorAbrir = 0;
+        let contadorFechar = 0;
+        let historicoAcionamentos = [];
 
         document.addEventListener('DOMContentLoaded', () => {
             console.log("✅ Frontend carregado e pronto para acionamento!");
+            carregarHistoricoSalvo();
             atualizarStatusBD();
+            inicializarGrafico(contadorAbrir, contadorFechar);
         });
+
+        // Carrega o histórico salvo no localStorage do navegador
+        function carregarHistoricoSalvo() {
+            const historicoSalvo = localStorage.getItem('historico_acionamentos');
+            if (historicoSalvo) {
+                try {
+                    historicoAcionamentos = JSON.parse(historicoSalvo);
+                    // Atualiza os contadores com base nos itens salvos
+                    contadorAbrir = historicoAcionamentos.filter(item => item.tipo === 'abrir').length;
+                    contadorFechar = historicoAcionamentos.filter(item => item.tipo === 'fechar').length;
+                    atualizarListaHistorico();
+                } catch(e) {
+                    historicoAcionamentos = [];
+                }
+            }
+        }
+
+        function salvarHistoricoNoStorage() {
+            localStorage.setItem('historico_acionamentos', JSON.stringify(historicoAcionamentos));
+        }
+
+        function inicializarGrafico(qtdAbrir, qtdFechar) {
+            const ctx = document.getElementById('graficoFrequencia');
+            if (!ctx) return;
+
+            if (meuGraficoFrequencia) {
+                meuGraficoFrequencia.data.datasets[0].data = [qtdAbrir, qtdFechar];
+                meuGraficoFrequencia.update();
+                return;
+            }
+
+            meuGraficoFrequencia = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Abrir', 'Fechar'],
+                    datasets: [{
+                        label: 'Número de Acionamentos',
+                        data: [qtdAbrir, qtdFechar],
+                        backgroundColor: ['#2ecc71', '#e74c3c'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1 }
+                        }
+                    }
+                }
+            });
+        }
 
         function atualizarStatusBD() {
             fetch('/api/status')
@@ -244,11 +451,121 @@ void loop() {
                     }
                 })
                 .catch(() => {
-                    // Fallback para GitHub Pages (usa localStorage)
                     const totalLocal = parseInt(localStorage.getItem('total_acionamentos') || '0', 10);
                     const contador = document.getElementById('contador');
                     if (contador) contador.textContent = totalLocal;
                 });
+        }
+
+        // FUNÇÃO PARA ABRIR/FECHAR O HISTÓRICO EXPANSÍVEL
+        function toggleHistorico() {
+            const painel = document.getElementById('painelHistorico');
+            const seta = document.getElementById('setaHistorico');
+            
+            if (painel.style.display === 'none' || painel.style.display === '') {
+                painel.style.display = 'block';
+                seta.classList.add('aberto');
+            } else {
+                painel.style.display = 'none';
+                seta.classList.remove('aberto');
+            }
+        }
+
+        // FUNÇÃO PARA ADICIONAR ACIONAMENTO NO HISTÓRICO
+        function registrarHistorico(acao) {
+            const agora = new Date();
+            const dataFormatada = agora.toLocaleDateString('pt-BR');
+            const horaFormatada = agora.toLocaleTimeString('pt-BR');
+            const textoAcao = acao === 'abrir' ? '▲ Abertura' : '▼ Fechamento';
+            
+            historicoAcionamentos.unshift({
+                id: Date.now(),
+                tipo: acao,
+                texto: textoAcao,
+                dataHora: `${dataFormatada} às ${horaFormatada}`
+            });
+
+            salvarHistoricoNoStorage();
+            atualizarListaHistorico();
+        }
+
+        // APAGAR UM ITEM ESPECÍFICO DO HISTÓRICO VIA LIXEIRA
+        function deletarItemHistorico(id) {
+            const itemApagado = historicoAcionamentos.find(item => item.id === id);
+            
+            if (itemApagado) {
+                if (itemApagado.tipo === 'abrir' && contadorAbrir > 0) contadorAbrir--;
+                if (itemApagado.tipo === 'fechar' && contadorFechar > 0) contadorFechar--;
+            }
+
+            historicoAcionamentos = historicoAcionamentos.filter(item => item.id !== id);
+            salvarHistoricoNoStorage();
+            atualizarListaHistorico();
+            inicializarGrafico(contadorAbrir, contadorFechar);
+        }
+
+        function atualizarListaHistorico() {
+            const container = document.getElementById('listaAcionamentos');
+            const aviso = document.getElementById('nenhumHistorico');
+            
+            if (!container) return;
+
+            if (historicoAcionamentos.length === 0) {
+                aviso.style.display = 'block';
+                container.innerHTML = '';
+                return;
+            }
+
+            aviso.style.display = 'none';
+            let html = '';
+            historicoAcionamentos.forEach(item => {
+                html += `<div class="item-historico ${item.tipo}">
+                    <div>
+                        <span><strong>${item.texto}</strong></span>
+                        <span style="color: #666; margin-left: 10px;">${item.dataHora}</span>
+                    </div>
+                    <button class="btn-deletar-item" onclick="deletarItemHistorico(${item.id})" title="Apagar registro">🗑️</button>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        // FUNÇÃO PARA RESETAR OS DADOS
+        function resetarDados() {
+            if (confirm("Tem certeza que deseja zerar os acionamentos e recomeçar?")) {
+                localStorage.setItem('total_acionamentos', '0');
+                localStorage.removeItem('historico_acionamentos');
+                
+                contadorAbrir = 0;
+                contadorFechar = 0;
+                inicializarGrafico(0, 0);
+
+                historicoAcionamentos = [];
+                atualizarListaHistorico();
+
+                const contador = document.getElementById('contador');
+                if (contador) contador.textContent = '0';
+
+                const ultimoRegistro = document.getElementById('ultimoRegistro');
+                if (ultimoRegistro) ultimoRegistro.textContent = 'Nenhum acionamento recente';
+
+                fetch('/api/reset', { method: 'POST' }).catch(() => {});
+
+                console.log("🔄 Dados resetados com sucesso!");
+            }
+        }
+
+        function registrarDataHora(acao) {
+            const agora = new Date();
+            const dataFormatada = agora.toLocaleDateString('pt-BR');
+            const horaFormatada = agora.toLocaleTimeString('pt-BR');
+            
+            const textoAcao = acao === 'abrir' ? 'Abertura' : 'Fechamento';
+            const elemento = document.getElementById('ultimoRegistro');
+            
+            if (elemento) {
+                elemento.textContent = `${textoAcao} em ${dataFormatada} às ${horaFormatada}`;
+            }
         }
 
         function tocarBipe(frequencia = 1000, duracaoMs = 150) {
@@ -314,7 +631,9 @@ void loop() {
                 setTimeout(() => { ledControle.style.backgroundColor = '#7f8c8d'; }, 300);
             }
 
-            // Tenta enviar para a API Flask; se falhar (no GitHub Pages), simula via localStorage
+            registrarDataHora(acao);
+            registrarHistorico(acao);
+
             fetch(`/api/portao/${acao}`, { method: 'POST' })
                 .then(res => {
                     if (!res.ok) throw new Error('Modo Estático');
@@ -332,6 +651,9 @@ void loop() {
                 });
 
             if (acao === 'abrir') {
+                contadorAbrir++;
+                inicializarGrafico(contadorAbrir, contadorFechar);
+
                 iniciarSinalSonoro(3000);
                 piscarLED('#2ecc71', 3000);
 
@@ -346,6 +668,9 @@ void loop() {
                 }, 3000);
 
             } else if (acao === 'fechar') {
+                contadorFechar++;
+                inicializarGrafico(contadorAbrir, contadorFechar);
+
                 iniciarSinalSonoro(3000);
                 piscarLED('#e74c3c', 3000);
 
@@ -378,6 +703,6 @@ void loop() {
             }
         }
     </script>
-    <script src="static/js/main.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>

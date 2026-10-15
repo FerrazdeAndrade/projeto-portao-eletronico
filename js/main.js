@@ -5,8 +5,30 @@ let intervaloLED;
 // Executa automaticamente assim que a página é carregada
 document.addEventListener('DOMContentLoaded', () => {
     console.log("Sistema do Portão Automático inicializado no Frontend!");
+    atualizarGauge(0);
     atualizarStatusBD();
 });
+
+function atualizarGauge(porcentagem) {
+    const gauge = document.querySelector('.gauge');
+    const valorGauge = document.getElementById('valorGauge');
+    const textoGauge = document.getElementById('textoGauge');
+
+    if (!gauge) return;
+
+    // Atualiza a variável CSS usada pelo conic-gradient
+    gauge.style.setProperty('--progresso', `${porcentagem}%`);
+    valorGauge.textContent = `${Math.round(porcentagem)}%`;
+
+    // Atualiza o texto descritivo com base na posição
+    if (porcentagem === 0) {
+        textoGauge.textContent = "Fechado";
+    } else if (porcentagem === 100) {
+        textoGauge.textContent = "Aberto";
+    } else {
+        textoGauge.textContent = "Movimentando...";
+    }
+}
 
 // Procura a contagem de acionamentos no banco de dados via API
 function atualizarStatusBD() {
@@ -114,30 +136,48 @@ function enviarComando(acao) {
 
     if (acao === 'abrir') {
         iniciarSinalSonoro(3000);
-        piscarLED('#2ecc71', 3000); // Pisca LED Verde
+        piscarLED('#2ecc71', 3000);
 
         portao.classList.remove('fechado');
         portao.classList.add('aberto');
         estadoTexto.textContent = 'ABRINDO...';
         estadoTexto.style.color = '#2ecc71';
 
+        // --- ANIMAÇÃO SUAVES DO GAUGE (0% a 100% em 3 segundos) ---
+        let progresso = 0;
+        let intervaloGauge = setInterval(() => {
+            progresso += 2; // Incrementa a cada 60ms
+            if (progresso > 100) progresso = 100;
+            atualizarGauge(progresso);
+            if (progresso >= 100) clearInterval(intervaloGauge);
+        }, 60);
+
         setTimeout(() => {
             estadoTexto.textContent = 'ABERTO';
-            btnFechar.disabled = false; // Liberta o botão FECHAR
+            btnFechar.disabled = false;
         }, 3000);
 
     } else if (acao === 'fechar') {
         iniciarSinalSonoro(3000);
-        piscarLED('#e74c3c', 3000); // Pisca LED Vermelho
+        piscarLED('#e74c3c', 3000);
 
         portao.classList.remove('aberto');
         portao.classList.add('fechado');
         estadoTexto.textContent = 'FECHANDO...';
         estadoTexto.style.color = '#e74c3c';
 
+        // --- ANIMAÇÃO SUAVE DO GAUGE (100% a 0% em 3 segundos) ---
+        let progresso = 100;
+        let intervaloGauge = setInterval(() => {
+            progresso -= 2; // Decrementa a cada 60ms
+            if (progresso < 0) progresso = 0;
+            atualizarGauge(progresso);
+            if (progresso <= 0) clearInterval(intervaloGauge);
+        }, 60);
+
         setTimeout(() => {
             estadoTexto.textContent = 'FECHADO';
-            btnAbrir.disabled = false; // Liberta o botão ABRIR
+            btnAbrir.disabled = false;
         }, 3000);
     }
 }
