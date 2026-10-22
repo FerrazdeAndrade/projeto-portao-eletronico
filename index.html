@@ -8,7 +8,27 @@
     <!-- BIBLIOTECA CHART.JS -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* Estilos para alinhar o Diagrama e o Histórico lado a lado */
+        /* Estilos para alinhar o Portão de Garagem e a Coluna do Controle lado a lado */
+        .painel-principal {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+            align-items: stretch;
+        }
+
+        /* Coluna da direita alinhando o Controle exatamente em cima do Reset na parte inferior */
+        .coluna-direita {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            gap: 15px;
+            height: 100%;
+        }
+
+        /* Estilos para alinhar o Gauge e o Histórico lado a lado na parte inferior */
         .painel-inferior-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -88,6 +108,7 @@
             transform: scale(1.15);
         }
         @media (max-width: 850px) {
+            .painel-principal,
             .painel-inferior-grid {
                 grid-template-columns: 1fr;
             }
@@ -98,7 +119,7 @@
     <div class="painel-principal">
         
         <!-- CARD 1: PORTÃO DE GARAGEM -->
-        <div class="card card-portao">
+        <div class="card card-portao" style="margin-top: 0;">
             <h2>🏠 Portão de Garagem</h2>
             
             <div class="garagem">
@@ -117,37 +138,44 @@
                 <p>Estado: <strong id="estado">FECHADO</strong></p>
                 <p>Acionamentos no BD: <strong id="contador">47</strong></p>
             </div>
+        </div>
+
+        <!-- COLUNA DIREITA: CONTROLE E RESET -->
+        <div class="coluna-direita">
+            <!-- CARD 2: CONTROLE REMOTO -->
+            <div class="card card-controle" style="margin-top: 0;">
+                <div class="top-controle">
+                    <h2>📻 Controle</h2>
+                    <div class="led-controle" id="ledControle"></div>
+                </div>
+                
+                <p class="instrucoes">Clique para acionar:</p>
+
+                <div class="botoes">
+                    <button id="btnAbrir" class="btn btn-abrir" onclick="enviarComando('abrir')">▲ ABRIR</button>
+                    <button id="btnFechar" class="btn btn-fechar" onclick="enviarComando('fechar')" disabled>▼ FECHAR</button>
+                </div>
+            </div>
 
             <!-- BOTÃO PARA RESETAR DADOS -->
-            <button class="btn-reset" onclick="resetarDados()" style="margin-top: 15px; width: 100%; background-color: #e67e22; color: white; padding: 10px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
+            <button class="btn-reset" onclick="resetarDados()" style="width: 100%; background-color: #e67e22; color: white; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);">
                 🔄 Resetar Dados / Zerar Contador
             </button>
         </div>
-
-        <!-- CARD 2: CONTROLE REMOTO -->
-        <div class="card card-controle">
-            <div class="top-controle">
-                <h2>📻 Controle</h2>
-                <div class="led-controle" id="ledControle"></div>
-            </div>
-            
-            <p class="instrucoes">Clique para acionar:</p>
-
-            <div class="botoes">
-                <button id="btnAbrir" class="btn btn-abrir" onclick="enviarComando('abrir')">▲ ABRIR</button>
-                <button id="btnFechar" class="btn btn-fechar" onclick="enviarComando('fechar')" disabled>▼ FECHAR</button>
-            </div>
-        </div>
     </div>
 
-    <!-- SEÇÃO LADO A LADO: DIAGRAMA E HISTÓRICO -->
+    <!-- SEÇÃO LADO A LADO: GAUGE E HISTÓRICO -->
     <div class="painel-inferior-grid">
         
-        <!-- CARD: DIAGRAMA DE FREQUÊNCIA DE ACIONAMENTOS -->
-        <div class="card card-diagrama" style="margin-top: 0; height: 100%; box-sizing: border-box;">
-            <h3>📊 Frequência de Acionamentos</h3>
-            <div style="width: 100%; max-width: 320px; margin: 0 auto;">
-                <canvas id="graficoFrequencia"></canvas>
+        <!-- CARD: GAUGE DE PORCENTAGEM DE ABERTURA -->
+        <div class="card card-gauge" style="margin-top: 0; height: 100%; box-sizing: border-box; text-align: center;">
+            <h3>📊 Nível de Abertura do Portão</h3>
+            <div style="width: 100%; max-width: 250px; margin: 0 auto; position: relative;">
+                <canvas id="graficoGauge"></canvas>
+                <!-- Texto centralizado indicando a porcentagem exata -->
+                <div id="textoGauge" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); font-size: 1.5rem; font-weight: bold; color: #2c3e50;">
+                    0%
+                </div>
             </div>
             <p style="margin-top: 15px; font-size: 13px; color: #666;">
                 🕒 Último Acionamento: <strong id="ultimoRegistro">Nenhum acionamento recente</strong>
@@ -370,7 +398,7 @@ void loop() {
         let audioContext;
         let intervaloBipe;
         let intervaloLED;
-        let meuGraficoFrequencia;
+        let meuGraficoGauge;
         let contadorAbrir = 0;
         let contadorFechar = 0;
         let historicoAcionamentos = [];
@@ -379,18 +407,14 @@ void loop() {
             console.log("✅ Frontend carregado e pronto para acionamento!");
             carregarHistoricoSalvo();
             atualizarStatusBD();
-            inicializarGrafico(contadorAbrir, contadorFechar);
+            inicializarGauge(0);
         });
 
-        // Carrega o histórico salvo no localStorage do navegador
         function carregarHistoricoSalvo() {
             const historicoSalvo = localStorage.getItem('historico_acionamentos');
             if (historicoSalvo) {
                 try {
                     historicoAcionamentos = JSON.parse(historicoSalvo);
-                    // Atualiza os contadores com base nos itens salvos
-                    contadorAbrir = historicoAcionamentos.filter(item => item.tipo === 'abrir').length;
-                    contadorFechar = historicoAcionamentos.filter(item => item.tipo === 'fechar').length;
                     atualizarListaHistorico();
                 } catch(e) {
                     historicoAcionamentos = [];
@@ -402,40 +426,63 @@ void loop() {
             localStorage.setItem('historico_acionamentos', JSON.stringify(historicoAcionamentos));
         }
 
-        function inicializarGrafico(qtdAbrir, qtdFechar) {
-            const ctx = document.getElementById('graficoFrequencia');
+        function inicializarGauge(porcentagem = 0) {
+            const ctx = document.getElementById('graficoGauge');
             if (!ctx) return;
 
-            if (meuGraficoFrequencia) {
-                meuGraficoFrequencia.data.datasets[0].data = [qtdAbrir, qtdFechar];
-                meuGraficoFrequencia.update();
+            let valor = Math.max(0, Math.min(100, porcentagem));
+            let resto = 100 - valor;
+
+            if (meuGraficoGauge) {
+                meuGraficoGauge.data.datasets[0].data = [valor, resto, 100];
+                meuGraficoGauge.update();
+                const textoEl = document.getElementById('textoGauge');
+                if (textoEl) textoEl.textContent = `${Math.round(valor)}%`;
                 return;
             }
 
-            meuGraficoFrequencia = new Chart(ctx, {
-                type: 'bar',
+            meuGraficoGauge = new Chart(ctx, {
+                type: 'doughnut',
                 data: {
-                    labels: ['Abrir', 'Fechar'],
                     datasets: [{
-                        label: 'Número de Acionamentos',
-                        data: [qtdAbrir, qtdFechar],
-                        backgroundColor: ['#2ecc71', '#e74c3c'],
-                        borderWidth: 1
+                        data: [valor, resto, 100],
+                        backgroundColor: ['#2ecc71', '#e2ded5', 'transparent'],
+                        borderWidth: 0
                     }]
                 },
                 options: {
                     responsive: true,
+                    circumference: 180,
+                    rotation: 270,
                     plugins: {
-                        legend: { display: false }
+                        legend: { display: false },
+                        tooltip: { enabled: false }
                     },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: { stepSize: 1 }
-                        }
-                    }
+                    cutout: '75%'
                 }
             });
+
+            const textoEl = document.getElementById('textoGauge');
+            if (textoEl) textoEl.textContent = `${Math.round(valor)}%`;
+        }
+
+        function animarGauge(deValor, paraValor, duracaoMs = 3000) {
+            let inicio = null;
+
+            function passo(timestamp) {
+                if (!inicio) inicio = timestamp;
+                let progresso = timestamp - inicio;
+                let progressoAtual = Math.min(progresso / duracaoMs, 1);
+                
+                let valorAtual = deValor + (paraValor - deValor) * progressoAtual;
+                inicializarGauge(valorAtual);
+
+                if (progresso < duracaoMs) {
+                    requestAnimationFrame(passo);
+                }
+            }
+
+            requestAnimationFrame(passo);
         }
 
         function atualizarStatusBD() {
@@ -457,7 +504,6 @@ void loop() {
                 });
         }
 
-        // FUNÇÃO PARA ABRIR/FECHAR O HISTÓRICO EXPANSÍVEL
         function toggleHistorico() {
             const painel = document.getElementById('painelHistorico');
             const seta = document.getElementById('setaHistorico');
@@ -471,7 +517,6 @@ void loop() {
             }
         }
 
-        // FUNÇÃO PARA ADICIONAR ACIONAMENTO NO HISTÓRICO
         function registrarHistorico(acao) {
             const agora = new Date();
             const dataFormatada = agora.toLocaleDateString('pt-BR');
@@ -489,19 +534,10 @@ void loop() {
             atualizarListaHistorico();
         }
 
-        // APAGAR UM ITEM ESPECÍFICO DO HISTÓRICO VIA LIXEIRA
         function deletarItemHistorico(id) {
-            const itemApagado = historicoAcionamentos.find(item => item.id === id);
-            
-            if (itemApagado) {
-                if (itemApagado.tipo === 'abrir' && contadorAbrir > 0) contadorAbrir--;
-                if (itemApagado.tipo === 'fechar' && contadorFechar > 0) contadorFechar--;
-            }
-
             historicoAcionamentos = historicoAcionamentos.filter(item => item.id !== id);
             salvarHistoricoNoStorage();
             atualizarListaHistorico();
-            inicializarGrafico(contadorAbrir, contadorFechar);
         }
 
         function atualizarListaHistorico() {
@@ -530,15 +566,12 @@ void loop() {
             container.innerHTML = html;
         }
 
-        // FUNÇÃO PARA RESETAR OS DADOS
         function resetarDados() {
             if (confirm("Tem certeza que deseja zerar os acionamentos e recomeçar?")) {
                 localStorage.setItem('total_acionamentos', '0');
                 localStorage.removeItem('historico_acionamentos');
                 
-                contadorAbrir = 0;
-                contadorFechar = 0;
-                inicializarGrafico(0, 0);
+                inicializarGauge(0);
 
                 historicoAcionamentos = [];
                 atualizarListaHistorico();
@@ -651,8 +684,7 @@ void loop() {
                 });
 
             if (acao === 'abrir') {
-                contadorAbrir++;
-                inicializarGrafico(contadorAbrir, contadorFechar);
+                animarGauge(0, 100, 3000);
 
                 iniciarSinalSonoro(3000);
                 piscarLED('#2ecc71', 3000);
@@ -668,8 +700,7 @@ void loop() {
                 }, 3000);
 
             } else if (acao === 'fechar') {
-                contadorFechar++;
-                inicializarGrafico(contadorAbrir, contadorFechar);
+                animarGauge(100, 0, 3000);
 
                 iniciarSinalSonoro(3000);
                 piscarLED('#e74c3c', 3000);
